@@ -6,7 +6,8 @@ from dash.dependencies import Input, Output
 import numpy as np
 
 # Load dataset
-file_path = r'd:\Laskar Ai\Submission Visualisasi Data\VisualisasiData\dashboard\all_data.csv'
+file_path = 'https://raw.githubusercontent.com/hid30/VisualData/main/dashboard/all_data.csv'
+# file_path = r'd:\Laskar Ai\Submission Visualisasi Data\VisualisasiData\dashboard\all_data.csv'
 df = pd.read_csv(file_path)
 
 # Pastikan format tanggal benar
