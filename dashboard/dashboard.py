@@ -1,91 +1,89 @@
 import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
-from babel.numbers import format_currency
+import dash
+from dash import dcc, html
+import plotly.express as px
+from dash.dependencies import Input, Output
+import numpy as np
 
 # Load dataset
-@st.cache_data
-def load_data():
-    try:
-        df = pd.read_csv(r"D:\Laskar Ai\Submission Visualisasi Data\VisualisasiData\dashboard\all_data.csv")
+file_path = r'd:\Laskar Ai\Submission Visualisasi Data\VisualisasiData\dashboard\all_data.csv'
+df = pd.read_csv(file_path)
 
-        # Pastikan kolom 'dteday' ada
-        if 'dteday' in df.columns:
-            df['dteday'] = pd.to_datetime(df['dteday'])
-        else:
-            st.error("Kolom 'dteday' tidak ditemukan dalam dataset.")
-            st.stop()
-        
-        return df
-    except FileNotFoundError:
-        st.error("File 'all_data.csv' tidak ditemukan. Periksa direktori file.")
-        st.stop()
+# Pastikan format tanggal benar
+df['dteday'] = pd.to_datetime(df['dteday'])
+df['year_month'] = df['dteday'].dt.to_period('M').astype(str)
+df['day_of_week'] = df['dteday'].dt.day_name()
 
-df = load_data()
+# Menambahkan kolom jam transaksi jika ada dalam dataset
+if 'hr' in df.columns:
+    df['hour'] = df['hr']
+else:
+    df['hour'] = np.nan
 
-# Sidebar untuk filter tanggal
-st.sidebar.header("Filter Data")
-start_date = st.sidebar.date_input("Mulai Tanggal", df['dteday'].min().date())
-end_date = st.sidebar.date_input("Sampai Tanggal", df['dteday'].max().date())
+# Mengelompokkan data berdasarkan waktu
+df_time = df.groupby('year_month', as_index=False).agg({'instant': 'count'})
+df_time.columns = ['year_month', 'transaction_count']
 
-# Filter data berdasarkan tanggal
-df_filtered = df[(df['dteday'].dt.date >= start_date) & (df['dteday'].dt.date <= end_date)]
+# Mengelompokkan data berdasarkan hari dalam seminggu
+df_weekday = df.groupby('day_of_week', as_index=False)['instant'].count()
+df_weekday.columns = ['day_of_week', 'transaction_count']
 
-# Menampilkan total pesanan dan pendapatan
-total_orders = df_filtered['instant'].nunique()
-total_revenue = df_filtered['cnt'].sum()
+# Mengelompokkan data berdasarkan musim jika tersedia
+df_season = df.groupby('season', as_index=False)['instant'].count()
+df_season.columns = ['season', 'transaction_count']
 
-st.title("📊 Dashboard Analisis Penyewaan Sepeda")
+# Menyesuaikan label musim
+season_labels = {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}
+df_season['season'] = df_season['season'].map(season_labels)
 
-col1, col2 = st.columns(2)
-col1.metric("Total Transaksi", total_orders)
-col2.metric("Total Pengguna", f"{total_revenue:,}")
+# Heatmap hubungan waktu transaksi dengan jumlah transaksi jika kolom hour tersedia
+if 'hour' in df.columns:
+    pivot_time = df.pivot_table(index='day_of_week', columns='hour', values='instant', aggfunc='count', fill_value=0)
+    pivot_time = pivot_time.reindex(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+else:
+    pivot_time = None
 
-# Grafik jumlah transaksi per hari
-st.subheader("📅 Jumlah Penyewaan Harian")
-daily_orders = df_filtered.groupby(df_filtered['dteday'].dt.date)['instant'].nunique()
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(daily_orders.index, daily_orders.values, marker='o', linestyle='-', color='blue')
-ax.set_xlabel("Tanggal")
-ax.set_ylabel("Jumlah Transaksi")
-ax.set_title("Jumlah Penyewaan Sepeda Harian")
-plt.xticks(rotation=45)
-st.pyplot(fig)
+# Initialize Dash app
+app = dash.Dash(__name__)
+app.layout = html.Div([
+    html.H1("Dashboard Analisis Data Penjualan"),
+    
+    html.H3("Kapan transaksi paling banyak terjadi?"),
+    dcc.Graph(
+        id='time-series-chart',
+        figure=px.line(df_time, x='year_month', y='transaction_count', title='Tren Jumlah Transaksi per Bulan')
+    ),
+    html.P("Grafik ini menunjukkan tren jumlah transaksi yang terjadi setiap bulan. Dengan melihat tren ini, kita bisa memahami pola musiman atau perubahan signifikan dalam transaksi."),
+    
+    html.H3("Hari apa transaksi paling tinggi?"),
+    dcc.Graph(
+        id='weekday-chart',
+        figure=px.bar(df_weekday, x='day_of_week', y='transaction_count', title='Jumlah Transaksi berdasarkan Hari dalam Seminggu')
+    ),
+    html.P("Grafik ini menggambarkan jumlah transaksi berdasarkan hari dalam seminggu. Informasi ini dapat digunakan untuk mengidentifikasi hari dengan aktivitas transaksi tertinggi."),
+    
+    html.H3("Bagaimana pengaruh musim terhadap jumlah transaksi?"),
+    dcc.Graph(
+        id='season-chart',
+        figure=px.bar(df_season, x='season', y='transaction_count', title='Jumlah Transaksi Berdasarkan Musim', 
+                      labels={'season': 'Musim', 'transaction_count': 'Jumlah Transaksi'})
+    ),
+    html.P("Grafik ini menunjukkan jumlah transaksi pada berbagai musim (Spring, Summer, Fall, Winter). Data ini berguna untuk melihat apakah ada perbedaan pola transaksi yang dipengaruhi oleh perubahan musim."),
+])
 
-# Grafik kondisi cuaca dan penyewaan
-st.subheader("🌦️ Pengaruh Cuaca terhadap Penyewaan")
-weather_counts = df_filtered.groupby('weathersit')['cnt'].sum()
-weather_labels = {1: "Cerah", 2: "Mendung", 3: "Hujan Ringan", 4: "Hujan Lebat"}
-weather_counts.index = weather_counts.index.map(weather_labels)
+if pivot_time is not None:
+    app.layout.children.extend([
+        html.H3("Jam berapa transaksi paling tinggi?"),
+        dcc.Graph(
+            id='heatmap-transactions',
+            figure=px.imshow(pivot_time.values,
+                             labels={'x': 'Hour', 'y': 'Day of Week', 'color': 'Transaction Count'},
+                             x=pivot_time.columns,
+                             y=pivot_time.index,
+                             title='Heatmap Jumlah Transaksi Berdasarkan Hari dan Jam')
+        ),
+        html.P("Heatmap ini menunjukkan jumlah transaksi yang terjadi pada berbagai jam dalam sehari dan hari dalam seminggu. Informasi ini dapat membantu dalam memahami waktu-waktu dengan transaksi paling ramai.")
+    ])
 
-fig, ax = plt.subplots(figsize=(8, 5))
-sns.barplot(x=weather_counts.index, y=weather_counts.values, ax=ax, palette="coolwarm")
-ax.set_xlabel("Kondisi Cuaca")
-ax.set_ylabel("Jumlah Penyewaan")
-ax.set_title("Penyewaan Sepeda Berdasarkan Cuaca")
-st.pyplot(fig)
-
-# Grafik distribusi jam penggunaan
-st.subheader("⏰ Distribusi Penyewaan Berdasarkan Jam")
-fig, ax = plt.subplots(figsize=(10, 5))
-sns.histplot(df_filtered['hr'], bins=24, kde=True, ax=ax, color="green")
-ax.set_xlabel("Jam")
-ax.set_ylabel("Jumlah Penyewaan")
-ax.set_title("Distribusi Penyewaan Sepeda per Jam")
-st.pyplot(fig)
-
-# Grafik penyewaan berdasarkan musim
-st.subheader("🍂 Penyewaan Berdasarkan Musim")
-season_counts = df_filtered.groupby('season')['cnt'].sum()
-season_labels = {1: "Musim Semi", 2: "Musim Panas", 3: "Musim Gugur", 4: "Musim Dingin"}
-season_counts.index = season_counts.index.map(season_labels)
-
-fig, ax = plt.subplots(figsize=(8, 5))
-sns.barplot(x=season_counts.index, y=season_counts.values, ax=ax, palette="viridis")
-ax.set_xlabel("Musim")
-ax.set_ylabel("Jumlah Penyewaan")
-ax.set_title("Penyewaan Sepeda Berdasarkan Musim")
-st.pyplot(fig)
-
-st.sidebar.text("© 2024 Dashboard by Deosa")
+if __name__ == '__main__':
+    app.run_server(debug=True)
