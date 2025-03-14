@@ -4,7 +4,7 @@ import plotly.express as px
 import numpy as np
 
 # Load dataset
-file_path = 'https://raw.githubusercontent.com/username/repository/main/dashboard/all_data.csv'
+file_path = 'https://raw.githubusercontent.com/hid30/VisualData/main/dashboard/all_data.csv'
 df = pd.read_csv(file_path)
 
 # Pastikan format tanggal benar
