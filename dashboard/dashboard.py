@@ -1,13 +1,10 @@
 import pandas as pd
-import dash
-from dash import dcc, html
+import streamlit as st
 import plotly.express as px
-from dash.dependencies import Input, Output
 import numpy as np
 
 # Load dataset
-file_path = 'https://raw.githubusercontent.com/hid30/VisualData/main/dashboard/all_data.csv'
-# file_path = r'd:\Laskar Ai\Submission Visualisasi Data\VisualisasiData\dashboard\all_data.csv'
+file_path = 'https://raw.githubusercontent.com/username/repository/main/dashboard/all_data.csv'
 df = pd.read_csv(file_path)
 
 # Pastikan format tanggal benar
@@ -44,47 +41,31 @@ if 'hour' in df.columns:
 else:
     pivot_time = None
 
-# Initialize Dash app
-app = dash.Dash(__name__)
-app.layout = html.Div([
-    html.H1("Dashboard Analisis Data Penjualan"),
-    
-    html.H3("Kapan transaksi paling banyak terjadi?"),
-    dcc.Graph(
-        id='time-series-chart',
-        figure=px.line(df_time, x='year_month', y='transaction_count', title='Tren Jumlah Transaksi per Bulan')
-    ),
-    html.P("Grafik ini menunjukkan tren jumlah transaksi yang terjadi setiap bulan. Dengan melihat tren ini, kita bisa memahami pola musiman atau perubahan signifikan dalam transaksi."),
-    
-    html.H3("Hari apa transaksi paling tinggi?"),
-    dcc.Graph(
-        id='weekday-chart',
-        figure=px.bar(df_weekday, x='day_of_week', y='transaction_count', title='Jumlah Transaksi berdasarkan Hari dalam Seminggu')
-    ),
-    html.P("Grafik ini menggambarkan jumlah transaksi berdasarkan hari dalam seminggu. Informasi ini dapat digunakan untuk mengidentifikasi hari dengan aktivitas transaksi tertinggi."),
-    
-    html.H3("Bagaimana pengaruh musim terhadap jumlah transaksi?"),
-    dcc.Graph(
-        id='season-chart',
-        figure=px.bar(df_season, x='season', y='transaction_count', title='Jumlah Transaksi Berdasarkan Musim', 
+# Streamlit UI
+st.title("Dashboard Analisis Data Penjualan")
+
+st.header("Kapan transaksi paling banyak terjadi?")
+time_chart = px.line(df_time, x='year_month', y='transaction_count', title='Tren Jumlah Transaksi per Bulan')
+st.plotly_chart(time_chart)
+st.write("Grafik ini menunjukkan tren jumlah transaksi yang terjadi setiap bulan. Dengan melihat tren ini, kita bisa memahami pola musiman atau perubahan signifikan dalam transaksi.")
+
+st.header("Hari apa transaksi paling tinggi?")
+weekday_chart = px.bar(df_weekday, x='day_of_week', y='transaction_count', title='Jumlah Transaksi berdasarkan Hari dalam Seminggu')
+st.plotly_chart(weekday_chart)
+st.write("Grafik ini menggambarkan jumlah transaksi berdasarkan hari dalam seminggu. Informasi ini dapat digunakan untuk mengidentifikasi hari dengan aktivitas transaksi tertinggi.")
+
+st.header("Bagaimana pengaruh musim terhadap jumlah transaksi?")
+season_chart = px.bar(df_season, x='season', y='transaction_count', title='Jumlah Transaksi Berdasarkan Musim', 
                       labels={'season': 'Musim', 'transaction_count': 'Jumlah Transaksi'})
-    ),
-    html.P("Grafik ini menunjukkan jumlah transaksi pada berbagai musim (Spring, Summer, Fall, Winter). Data ini berguna untuk melihat apakah ada perbedaan pola transaksi yang dipengaruhi oleh perubahan musim."),
-])
+st.plotly_chart(season_chart)
+st.write("Grafik ini menunjukkan jumlah transaksi pada berbagai musim (Spring, Summer, Fall, Winter). Data ini berguna untuk melihat apakah ada perbedaan pola transaksi yang dipengaruhi oleh perubahan musim.")
 
 if pivot_time is not None:
-    app.layout.children.extend([
-        html.H3("Jam berapa transaksi paling tinggi?"),
-        dcc.Graph(
-            id='heatmap-transactions',
-            figure=px.imshow(pivot_time.values,
-                             labels={'x': 'Hour', 'y': 'Day of Week', 'color': 'Transaction Count'},
-                             x=pivot_time.columns,
-                             y=pivot_time.index,
-                             title='Heatmap Jumlah Transaksi Berdasarkan Hari dan Jam')
-        ),
-        html.P("Heatmap ini menunjukkan jumlah transaksi yang terjadi pada berbagai jam dalam sehari dan hari dalam seminggu. Informasi ini dapat membantu dalam memahami waktu-waktu dengan transaksi paling ramai.")
-    ])
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
+    st.header("Jam berapa transaksi paling tinggi?")
+    heatmap_chart = px.imshow(pivot_time.values,
+                              labels={'x': 'Hour', 'y': 'Day of Week', 'color': 'Transaction Count'},
+                              x=pivot_time.columns,
+                              y=pivot_time.index,
+                              title='Heatmap Jumlah Transaksi Berdasarkan Hari dan Jam')
+    st.plotly_chart(heatmap_chart)
+    st.write("Heatmap ini menunjukkan jumlah transaksi yang terjadi pada berbagai jam dalam sehari dan hari dalam seminggu. Informasi ini dapat membantu dalam memahami waktu-waktu dengan transaksi paling ramai.")
