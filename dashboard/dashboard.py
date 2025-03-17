@@ -20,6 +20,7 @@ Original file is located at
 """
 
 !pip install dash gdown plotly
+!pip install streamlit gdown plotly pandas
 
 import pandas as pd
 import dash
