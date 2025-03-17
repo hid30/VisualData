@@ -19,8 +19,10 @@ Original file is located at
 ## Import Semua Packages/Library yang Digunakan
 """
 
-!pip install dash gdown plotly
-!pip install streamlit gdown plotly pandas
+
+!pip install gdown
+!pip install dash
+!pip install plotly
 
 import pandas as pd
 import dash
@@ -28,12 +30,19 @@ from dash import dcc, html
 import plotly.express as px
 from dash.dependencies import Input, Output
 import numpy as np
-import gdown
 
 """## Data Wrangling
 
 ### Gathering Data
 """
+
+import gdown
+import pandas as pd
+import dash
+from dash import dcc, html
+import plotly.express as px
+from dash.dependencies import Input, Output
+import numpy as np
 
 # Link Google Drive yang diberikan
 url = "https://drive.google.com/uc?id=1oKpEVR_rwshSEdhQrBYuFrspncVclZYw"
@@ -46,38 +55,86 @@ gdown.download(url, output, quiet=False)
 df = pd.read_csv(output)
 print(df.head())  # Menampilkan beberapa baris pertama
 
-"""### Assessing Data"""
+
+
+"""**Insight:**
+- Data Hour.csv dan Day.Csv sudah di marge menjadi all_data.csv sebelumnya
+- Data di simpan dalam drive dan sudah terlink
+
+### Assessing Data
+"""
 
 df.info()
+df.head()
 df.describe()
 
-"""### Cleaning Data"""
+"""**Insight:**
+- Periksa tipe data, jumlah missing values, dan distribusi awal data.
+- Mengecek apakah ada anomali dalam data seperti tanggal yang tidak valid atau nilai yang tidak logis.
 
-df['dteday'] = pd.to_datetime(df['dteday'])  # Konversi format tanggal
+### Cleaning Data
+"""
+
+df['dteday'] = pd.to_datetime(df['dteday'])  # Mengecek format tanggal
 df['year_month'] = df['dteday'].dt.to_period('M').astype(str)
 df['day_of_week'] = df['dteday'].dt.day_name()
 
-df['hour'] = df['hr'] if 'hr' in df.columns else np.nan
+if 'hr' in df.columns:
+    df['hour'] = df['hr']
+else:
+    df['hour'] = np.nan
 
-"""## Exploratory Data Analysis (EDA)"""
+"""**Insight:**
+- Konversi kolom tanggal ke format datetime agar dapat dianalisis lebih lanjut.
+- Menambahkan kolom year_month dan day_of_week untuk analisis lebih lanjut.
+- Memastikan keberadaan kolom hour untuk analisis lebih menggunakan visual heatmap.
 
-# Pengelompokan data
+## Exploratory Data Analysis (EDA)
+
+### Explore ...
+"""
+
 df_time = df.groupby('year_month', as_index=False).agg({'instant': 'count'})
 df_weekday = df.groupby('day_of_week', as_index=False)['instant'].count()
 df_season = df.groupby('season', as_index=False)['instant'].count()
 
-# Label musim
 season_labels = {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}
 df_season['season'] = df_season['season'].map(season_labels)
 
-"""## Visualization & Explanatory Analysis"""
+"""**Insight:**
+- Data dikelompokkan berdasarkan waktu (bulan, hari dalam seminggu, dan musim).
+- Jumlah transaksi dihitung untuk melihat pola dari masing-masing kategori.
+- Label musim diberikan agar lebih mudah dipahami dalam visualisasi.
 
-# Visualisasi transaksi per bulan
-fig = px.line(df_time, x='year_month', y='instant', title='Jumlah Transaksi Perbulan')
+## Visualization & Explanatory Analysis
+
+### Pertanyaan 1: Kapan transaksi paling banyak terjadi?
+"""
+
+# Assuming df is your DataFrame and is already loaded as in your previous code
+# Assuming 'year_month', 'instant', and other relevant columns are present in df
+
+df_time = df.groupby('year_month', as_index=False).agg({'instant': 'count'})
+df_weekday = df.groupby('day_of_week', as_index=False)['instant'].count()
+df_season = df.groupby('season', as_index=False)['instant'].count()
+
+season_labels = {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}
+df_season['season'] = df_season['season'].map(season_labels)
+
+# Rename the 'instant' column to 'transaction_count' in df_time
+df_time = df_time.rename(columns={'instant': 'transaction_count'})
+
+# Create the line chart using plotly.express
+fig = px.line(df_time, x='year_month', y='transaction_count', title='Jumlah Transaksi Perbulan')
+
+# Display the chart
 fig.show()
 
 """### Pertanyaan 2: Hari apa transaksi paling tinggi?"""
 
+# Assuming df_weekday is already defined and contains the data as described in your previous code
+
+# Sort df_weekday by 'instant' in descending order
 df_weekday = df_weekday.sort_values(by=['instant'], ascending=False)
 
 app = dash.Dash(__name__)
@@ -91,19 +148,29 @@ app.layout = html.Div(children=[
             x='day_of_week',
             y='instant',
             title='Penjualan Terbanyak dalam Hari',
-            text='instant',
-        ).update_traces(
+            text='instant',  # Display 'instant' values as text labels
+        )
+        .update_traces(
             texttemplate='%{text:,.0f}',
             textposition='outside',
-            marker_color=['red' if i == 0 else 'blue' for i in range(len(df_weekday))]
+            marker_color=['red' if i == 0 else 'blue' for i in range(len(df_weekday))]  # Highlight the first bar (highest selling) with red
         )
+        .update_layout(uniformtext_minsize=8, uniformtext_mode='hide')  # Adjust text size and visibility
     )
 ])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
 
-"""## Analisis Lanjutan (Opsional): Pengaruh Musim terhadap Jumlah Transaksi"""
+"""**Insight:**
+- Menunjukkan ritme penjualan per-Bulan.
+- Menunjukkan hari-hari dengan jumlah transaksi tertinggi.
+
+## Analisis Lanjutan (Opsional) Bagaimana pengaruh musim terhadap jumlah transaksi?
+"""
+
+# Assuming df_season is already defined and contains the data as described in your previous code
+# ... (your previous code to load and prepare the df_season DataFrame) ...
 
 app = dash.Dash(__name__)
 
@@ -117,7 +184,7 @@ app.layout = html.Div(children=[
             y='instant',
             title='Jumlah Transaksi Berdasarkan Musim'
         ).update_traces(
-            marker_color=['red' if val == df_season['instant'].max() else 'blue' for val in df_season['instant']]
+            marker_color=['red' if val == df_season['instant'].max() else 'blue' for val in df_season['instant']]  # Highlight highest bar with red
         )
     )
 ])
@@ -125,11 +192,14 @@ app.layout = html.Div(children=[
 if __name__ == '__main__':
     app.run_server(debug=True)
 
-"""## Conclusion
+"""Melihat apakah ada perbedaan jumlah transaksi pada setiap musim.
+Bisa digunakan untuk merencanakan strategi bisnis berdasarkan musim tertentu dengan mengeluarkan promo/model yang disesuaikan.
 
-1. **Kapan transaksi paling banyak terjadi?**
-   - Berdasarkan tren jumlah transaksi per bulan, lonjakan transaksi terjadi pada bulan tertentu, kemungkinan karena faktor musiman atau promosi.
+## Conclusion
 
-2. **Hari apa transaksi paling tinggi?**
-   - Dari analisis jumlah transaksi berdasarkan hari dalam seminggu, ditemukan bahwa transaksi tertinggi cenderung terjadi pada hari kerja atau akhir pekan tergantung pada kebiasaan pelanggan.
+- 1.Kapan transaksi paling banyak terjadi?
+Berdasarkan analisis tren jumlah transaksi per bulan, transaksi paling banyak terjadi pada bulan-bulan tertentu dengan pola yang dapat diamati. Jika terdapat lonjakan pada bulan tertentu, ini bisa disebabkan oleh faktor musiman, promosi, atau peningkatan aktivitas pelanggan pada periode tersebut.
+
+- 2. Hari apa transaksi paling tinggi?
+Dari analisis jumlah transaksi berdasarkan hari dalam seminggu, ditemukan bahwa hari dengan transaksi tertinggi cenderung terjadi pada hari kerja (weekday) atau akhir pekan, tergantung pada jenis bisnisnya. Jika transaksi lebih tinggi pada akhir pekan, ini bisa menunjukkan bahwa pelanggan lebih aktif berbelanja saat libur. Sebaliknya, jika puncaknya terjadi pada hari kerja, mungkin transaksi lebih terkait dengan kebutuhan rutin atau bisnis
 """
