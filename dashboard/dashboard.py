@@ -20,10 +20,7 @@ Original file is located at
 """
 
 import pandas as pd
-
-from dash import dcc, html
 import plotly.express as px
-from dash.dependencies import Input, Output
 import numpy as np
 
 """## Data Wrangling
