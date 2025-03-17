@@ -19,11 +19,6 @@ Original file is located at
 ## Import Semua Packages/Library yang Digunakan
 """
 
-
-!pip install gdown
-!pip install dash
-!pip install plotly
-
 import pandas as pd
 import dash
 from dash import dcc, html
