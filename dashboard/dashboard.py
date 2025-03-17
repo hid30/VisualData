@@ -20,7 +20,7 @@ Original file is located at
 """
 
 import pandas as pd
-import dash
+
 from dash import dcc, html
 import plotly.express as px
 from dash.dependencies import Input, Output
@@ -30,14 +30,6 @@ import numpy as np
 
 ### Gathering Data
 """
-
-import gdown
-import pandas as pd
-import dash
-from dash import dcc, html
-import plotly.express as px
-from dash.dependencies import Input, Output
-import numpy as np
 
 # Link Google Drive yang diberikan
 url = "https://drive.google.com/uc?id=1oKpEVR_rwshSEdhQrBYuFrspncVclZYw"
